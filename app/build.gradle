@@ -1,4 +1,6 @@
 apply plugin: 'com.android.application'
+apply plugin: 'android-apt'
+def AAVersion = '4.2.0'
 
 android {
     compileSdkVersion 25
@@ -11,12 +13,16 @@ android {
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
-
     lintOptions {
         abortOnError false
         lintConfig file('lint.xml')
         xmlOutput file("${buildDir}/outputs/lint-results.xml")
     }
+
+    applicationVariants.all { variant ->
+        appendVersionNameVersionCode(variant)
+    }
+
 
     buildTypes {
         release {
@@ -26,16 +32,38 @@ android {
     }
 }
 
+@SuppressWarnings("GroovyAssignabilityCheck")
+def appendVersionNameVersionCode(variant) {
+    variant.outputs.each { output ->
+        def applicationId = variant.mergedFlavor.applicationId + (variant.buildType.applicationIdSuffix == null ? "" : variant.buildType.applicationIdSuffix)
+        if (variant.buildType.name == android.buildTypes.debug.name || variant.buildType.name == android.buildTypes.release.name) {
+            if (output.zipAlign) {
+                def file = output.outputFile
+                output.outputFile = new File(file.parentFile, "${variant.buildType.name}_${applicationId}_v${variant.versionName}.apk")
+            }
+        }
+    }
+}
+
+apt {
+    arguments {
+        androidManifestFile variant.outputs[0]?.processResources?.manifestFile
+        resourcePackageName android.defaultConfig.applicationId
+    }
+}
+
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
-    compile 'com.android.support:appcompat-v7:25.3.1'
-    compile 'com.android.support.constraint:constraint-layout:1.0.2'
+    compile 'com.android.support:appcompat-v7:25.2.0'
+    compile 'com.android.support:recyclerview-v7:25.2.0'
     testCompile 'junit:junit:4.12'
+
+    // Android annotations
+    compile "org.androidannotations:androidannotations-api:$AAVersion"
+    apt "org.androidannotations:androidannotations:$AAVersion"
 }
 
-// For CI
 apply from: "https://raw.githubusercontent.com/monstar-lab/gradle-android-ci-check/1.3.1/ci.gradle"
-
