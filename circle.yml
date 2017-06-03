@@ -1,0 +1,24 @@
+machine:
+  java:
+    version: oraclejdk8
+  environment:
+    JAVA_OPTS: "-Xmx2048m -XX:MaxPermSize=1024m"
+    TERM: "dumb"
+  timezone: Asia/Tokyo
+dependencies:
+  pre:
+    - mkdir $ANDROID_HOME/licenses
+    - echo "8933bad161af4178b1185d1a37fbf41ea5269c55" >> $ANDROID_HOME/licenses/android-sdk-license
+test:
+  override:
+    - sh scripts/saddler.sh
+deployment:
+  master:
+    branch: master
+    commands:
+      - ./gradlew assemble app:uploadDeployGateDebug -PdisablePreDex
+  release:
+    tag: /v[0-9]+(\.[0-9]+)*/
+    commands:
+      - ./gradlew assemble -PdisablePreDex
+      - ./scripts/release.sh app/build/outputs/apk/app-release.apk app-release.apk
